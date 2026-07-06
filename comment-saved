@@ -1,0 +1,5 @@
+// BFS-ish over the stop hypergraph; this is O(num stops + ∑ᵣ sᵣ), where
+// sᵣ := number of stops on route r. Normal BFS on the route graph is
+// naturally O(num routes + num transfers)--the two summands are the
+// nodes and edges, respectively.
+
