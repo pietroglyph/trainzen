@@ -20,7 +20,7 @@ type Route struct {
 		// Just "Name" for consistency with Stop
 		Name string `json:"long_name"`
 	}
-	Id string
+	ID string
 }
 
 func (r Route) Name() string {
@@ -109,7 +109,7 @@ func main() {
 		go func(route Route, baseURL url.URL, baseQuery url.Values) {
 			stopsURL := baseURL.JoinPath("/stops")
 			stopsQuery := baseQuery
-			stopsQuery.Add("filter[route]", route.Id)
+			stopsQuery.Add("filter[route]", route.ID)
 			stopsURL.RawQuery = stopsQuery.Encode()
 
 			stopsResp, err := http.Get(stopsURL.String())

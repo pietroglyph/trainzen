@@ -60,7 +60,7 @@ func BuildStopGraph(routeStops []RouteAndStops) (StopGraph, StopStatistics) {
 			maxStops = RouteAndNumStops{rs.route, numStops}
 		}
 
-		graph.routeToStops[rs.route.Id] = rs.stops
+		graph.routeToStops[rs.route.ID] = rs.stops
 		for _, stop := range rs.stops {
 			node, ok := graph.stopToRoutes[stop.ID]
 			if !ok {
@@ -77,9 +77,10 @@ func BuildStopGraph(routeStops []RouteAndStops) (StopGraph, StopStatistics) {
 	return graph, StopStatistics{minStops, maxStops}
 }
 
-// BFS-ish over the stop hypergraph; this is tightly quadratic in the total number
-// of stops returned by the API, i.e., Θ(∑ᵣ sᵣ²), where sᵣ := number of stops on
-// route r. Normal BFS on the route graph is naturally O(num routes + num transfers)
+// BFS-ish over the stop hypergraph; this is O(number of unique stops + ∑ᵣ sᵣ),
+// where sᵣ := number of stops on route r. We can simplify to O(∑ᵣ sᵣ) since
+// total number of unique stops is clearly ≤ than the sum.
+// Normal BFS on the route graph is naturally O(num routes + num transfers)
 // (the two summands are the nodes and edges, respectively).
 func (g StopGraph) FindRoute(startID string, endID string) ([]string, error) {
 	if _, ok := g.stopToRoutes[startID]; !ok {
@@ -102,6 +103,8 @@ func (g StopGraph) FindRoute(startID string, endID string) ([]string, error) {
 			viaRouteName: g.stopToRoutes[endID].routes[0].Name(), // We "board" an arbitrary route from this stop
 		},
 	}
+	// Keyed by route IDs
+	visitedRoutes := make(map[string]bool)
 
 	queue := list.New()
 	queue.PushBack(endID)
@@ -128,7 +131,15 @@ func (g StopGraph) FindRoute(startID string, endID string) ([]string, error) {
 		node := g.stopToRoutes[stopID]
 		// We iterate over all connecting stops by iterating over all stops that connect to each connecting route
 		for _, route := range node.routes {
-			for _, connectingStop := range g.routeToStops[route.Id] {
+			// Doesn't matter that much since we process little data, but complexity is
+			// asymptotically much worse without this: it would be tightly quadratic in
+			// the total number of stops returned by the API, i.e., Θ(∑ᵣ sᵣ²).
+			if visitedRoutes[route.ID] {
+				continue
+			}
+			visitedRoutes[route.ID] = true
+
+			for _, connectingStop := range g.routeToStops[route.ID] {
 				if _, explored := state[connectingStop.ID]; explored {
 					continue
 				}
